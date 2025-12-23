@@ -32,6 +32,24 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
+      - name: Debug environment
+        run: |
+          echo "=== Debug: PYTHONPATH ==="
+          echo "$PYTHONPATH"
+          echo "=== Debug: python executable and version ==="
+          python -V
+          echo "=== Debug: sys.path ==="
+          python - <<'PY'
+import sys, os, pprint
+pprint.pprint(sys.path)
+print('cwd:', os.getcwd())
+try:
+    import glob
+    print('top-level files:', glob.glob('*')[:50])
+except Exception as e:
+    print('glob error', e)
+PY
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
