@@ -5,6 +5,12 @@ on:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
+  workflow_dispatch:
+    inputs:
+      test_files:
+        description: 'Specify test files or patterns to run (e.g. tests/ or tests/test_app.py)'
+        required: false
+        default: 'tests/test_app.py'
 
 jobs:
   test:
@@ -59,7 +65,7 @@ PY
 
       - name: Run tests
         env:
-          TEST_FILES: tests/test_app.py
+          TEST_FILES: ${{ github.event.inputs.test_files || 'tests/test_app.py' }}
         run: |
           echo "Running tests: ${TEST_FILES}"
           pytest ${TEST_FILES} --maxfail=1 --disable-warnings -q --cov=. --cov-report=xml
