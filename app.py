@@ -1,12 +1,10 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Blueprint
 from flask_sqlalchemy import SQLAlchemy
 
-app = Flask(__name__)
+db = SQLAlchemy()
 
-app.config['SQLALCHEMY_DATABASE_URI'] =  'mysql://root:vinni%407116A@localhost:3306/b14_flask'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+employee_bp = Blueprint('employee_bp', __name__)
 
-db = SQLAlchemy(app)
 class Employee(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable = False)
@@ -25,7 +23,7 @@ class Employee(db.Model):
 #with app.app_context():
 #    db.create_all()
 
-@app.route("/employees", methods=["POST"])
+@employee_bp.route("/employees", methods=["POST"])
 def create_employee():
     data = request.get_json()
     #print(data)
@@ -40,20 +38,22 @@ def create_employee():
     db.session.commit()
     return jsonify(new_emp.to_dict()),  201
 
-@app.route("/employees", methods=["GET"])
+@employee_bp.route("/employees", methods=["GET"])
 def get_employees():
     all_data = Employee.query.all()
     #return jsonify({"a": all_data})    
     return jsonify([emp.to_dict() for emp in all_data])    
 
-@app.route("/employees/<int:id>", methods=["GET"])
+@employee_bp.route("/employees/<int:id>", methods=["GET"])
 def get_employees_id(id):
     emp = Employee.query.get(id)
+    if not emp:
+        return jsonify({"error": "Employee not found"}), 404
     return jsonify(emp.to_dict())    
     
 
 
-@app.route("/employees/<int:id>", methods=["PUT"])
+@employee_bp.route("/employees/<int:id>", methods=["PUT"])
 def update_employees(id):
     emp = Employee.query.get(id) 
     if not emp:
@@ -68,10 +68,30 @@ def update_employees(id):
     
 
 
-@app.route("/employees/<int:id>", methods=["DELETE"])
+@employee_bp.route("/employees/<int:id>", methods=["DELETE"])
 def delete_employees(id):
-    pass
+    emp = Employee.query.get(id)
+    if not emp:
+        return jsonify({"error": "Employee not found"}), 404
+    db.session.delete(emp)
+    db.session.commit()
+    return '', 204
+
+def create_app(test_config=None):
+    app = Flask(__name__)
+    if test_config:
+        app.config.update(test_config)
+    else:
+        app.config['SQLALCHEMY_DATABASE_URI'] =  'mysql://root:vinni%407116A@localhost:3306/b14_flask'
+        app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    db.init_app(app)
+    app.register_blueprint(employee_bp)
+    with app.app_context():
+        db.create_all()
+    return app
+
 
 if __name__ == "__main__":
+    app = create_app()
     app.run(debug=True)
    
