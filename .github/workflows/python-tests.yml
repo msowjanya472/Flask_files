@@ -46,7 +46,8 @@ jobs:
           python -V
           echo "=== Debug: sys.path ==="
           python - <<'PY'
-import sys, os, pprint
+import sys, os
+import pprint
 pprint.pprint(sys.path)
 print('cwd:', os.getcwd())
 try:
