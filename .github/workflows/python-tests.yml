@@ -53,7 +53,7 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           docker run --rm -e SONAR_HOST_URL -e SONAR_TOKEN -v "${{ github.workspace }}":/usr/src sonarsource/sonar-scanner-cli \
-            -Dsonar.projectKey=msowjanya472_Flask_files \
+            -Dsonar.projectKey=sqp_207e40caf9ec2fcfc34cf7a74cc8fb7fa93c95d8 \
             -Dsonar.sources=. \
             -Dsonar.host.url=$SONAR_HOST_URL \
             -Dsonar.login=$SONAR_TOKEN \
