@@ -1,3 +1,15 @@
+from app import create_app, db
+
+def test_app_creation():
+    app = create_app()
+    assert app is not None
+
+
+
+
+
+
+
 import os
 import sys
 import json
