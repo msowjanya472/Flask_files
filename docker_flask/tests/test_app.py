@@ -1,14 +1,15 @@
 import json
 import pytest
-import os
-import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-# Ensure project root is on sys.path so imports like `from app import create_app` work
-ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-if ROOT not in sys.path:
-    sys.path.insert(0, ROOT)
+import json
+import pytest
+
+# Ensure relative imports work when tests run from subfolders
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from app import create_app, db
+
 
 @pytest.fixture
 def app():
