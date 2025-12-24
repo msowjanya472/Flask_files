@@ -77,19 +77,9 @@ def delete_employees(id):
     db.session.commit()
     return '', 204
 
-def create_app(test_config=None):
-    app = Flask(__name__)
-    if test_config:
-        app.config.update(test_config)
-    else:
-        app.config['SQLALCHEMY_DATABASE_URI'] =  'mysql://root:vinni%407116A@localhost:3306/b14_flask'
-        app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    db.init_app(app)
-    app.register_blueprint(employee_bp)
-    with app.app_context():
-        db.create_all()
-    return app
-
+# Backwards-compatible shim: expose package-level objects
+# Consumers can still `from app import create_app, db`.
+from app import create_app, db  # type: ignore
 
 if __name__ == "__main__":
     app = create_app()
