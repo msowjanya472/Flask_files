@@ -1,4 +1,4 @@
-name: CI - Python tests
+name: CI - Python Tests & SonarQube
 
 on:
   push:
@@ -8,28 +8,29 @@ on:
   workflow_dispatch:
     inputs:
       test_files:
-        description: 'Specify test files or patterns to run (e.g. tests/ or tests/test_app.py)'
+        description: 'Specify test files or patterns'
         required: false
-        default: 'tests/test_app.py'
+        default: 'tests'
 
 jobs:
-  test:
+  test-and-sonar:
     runs-on: ubuntu-latest
+
     env:
       PYTHONPATH: ${{ github.workspace }}
-    strategy:
-      matrix:
-        python-version: [ '3.12' ]
 
     steps:
+      # 1. Checkout code
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # 2. Setup Python
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: '3.12'
 
+      # 3. Cache pip dependencies
       - name: Cache pip
         uses: actions/cache@v4
         with:
@@ -38,52 +39,45 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      - name: Debug environment
-        run: |
-          echo "=== Debug: PYTHONPATH ==="
-          echo "$PYTHONPATH"
-          echo "=== Debug: python executable and version ==="
-          python -V
-          echo "=== Debug: sys.path ==="
-          python - <<'PY'
-import sys, os, pprint
-pprint.pprint(sys.path)
-print('cwd:', os.getcwd())
-try:
-    import glob
-    print('top-level files:', glob.glob('*')[:50])
-except Exception as e:
-    print('glob error', e)
-PY
-
+      # 4. Install dependencies
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          if [ -f "requirements.txt" ]; then pip install -r requirements.txt; fi
-          pip install -r docker_flask/requirements.txt || true
-          pip install flask flask_sqlalchemy pytest pytest-cov
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          if [ -f docker_flask/requirements.txt ]; then pip install -r docker_flask/requirements.txt; fi
+          pip install pytest pytest-cov flask flask_sqlalchemy
 
-      - name: Run tests
+      # 5. Run Pytest with coverage
+      - name: Run tests with coverage
         env:
-          TEST_FILES: ${{ github.event.inputs.test_files || 'tests/test_app.py' }}
+          TEST_FILES: ${{ github.event.inputs.test_files || 'tests' }}
         run: |
-          echo "Running tests: ${TEST_FILES}"
-          pytest ${TEST_FILES} --maxfail=1 --disable-warnings -q --cov=. --cov-report=xml
+          echo "Running tests from: $TEST_FILES"
+          pytest $TEST_FILES \
+            --maxfail=1 \
+            --disable-warnings \
+            --cov=. \
+            --cov-report=xml:coverage.xml
 
-      - name: Upload coverage XML
+      # 6. Upload coverage artifact (optional but useful)
+      - name: Upload coverage report
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-xml
+          name: coverage-report
           path: coverage.xml
 
+      # 7. SonarQube Scan
       - name: SonarQube Scan
         env:
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          docker run --rm -e SONAR_HOST_URL -e SONAR_TOKEN -v "${{ github.workspace }}":/usr/src sonarsource/sonar-scanner-cli \
-            -Dsonar.projectKey=sqp_207e40caf9ec2fcfc34cf7a74cc8fb7fa93c95d8 \
+          docker run --rm \
+            -e SONAR_HOST_URL \
+            -e SONAR_LOGIN=$SONAR_TOKEN \
+            -v "${{ github.workspace }}:/usr/src" \
+            sonarsource/sonar-scanner-cli \
+            -Dsonar.projectKey=flask-sonarqube \
             -Dsonar.sources=. \
-            -Dsonar.host.url=$SONAR_HOST_URL \
-            -Dsonar.login=$SONAR_TOKEN \
-            -Dsonar.python.coverage.reportPaths=coverage.xml
+            -Dsonar.python.coverage.reportPaths=coverage.xml \
+            -Dsonar.host.url=$SONAR_HOST_URL
